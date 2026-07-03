@@ -1,9 +1,9 @@
 "use client";
 
 import { Users, UserCheck, Rocket, ClipboardList } from "lucide-react";
-import { DashboardTopbar } from "@/components/dashboard/DashboardTopbar";
-import { PageHeader } from "@/components/dashboard/PageHeader";
-import { MetricCard } from "@/components/dashboard/MetricCard";
+import { DashboardTopbar } from "@/components/Dashboard/DashboardTopbar";
+import { PageHeader } from "@/components/Dashboard/PageHeader";
+import { MetricCard } from "@/components/Dashboard/MetricCard";
 
 export default function AdminDashboard() {
   return (
