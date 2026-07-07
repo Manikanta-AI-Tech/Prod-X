@@ -55,28 +55,67 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { session } } = await supabase.auth.getSession();
-
   const url = request.nextUrl.clone();
 
-  // Protected routes
-  if (!session && (
-    url.pathname.startsWith('/builder') || 
-    url.pathname.startsWith('/admin') || 
-    url.pathname.startsWith('/mentor')
-  )) {
-    url.pathname = '/auth';
+  // Protected routes — redirect to /auth if not logged in
+  if (!session) {
+    if (
+      url.pathname.startsWith('/builder') ||
+      url.pathname.startsWith('/admin') ||
+      url.pathname.startsWith('/mentor') ||
+      url.pathname.startsWith('/judge')
+    ) {
+      url.pathname = '/auth';
+      return NextResponse.redirect(url);
+    }
+    return response;
+  }
+
+  // User is logged in — fetch their role from the profiles table
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single();
+
+  const role = profile?.role || 'builder';
+  const roleDashboard: Record<string, string> = {
+    builder: '/builder',
+    mentor: '/mentor',
+    judge: '/judge',
+    admin: '/admin',
+  };
+
+  // Role-based post-login redirect (when hitting /auth while already logged in)
+  if (url.pathname === '/auth') {
+    url.pathname = roleDashboard[role] || '/builder';
     return NextResponse.redirect(url);
   }
 
-  // Auth page redirect
-  if (session && url.pathname === '/auth') {
-    url.pathname = '/builder';
-    return NextResponse.redirect(url);
+  // Ensure role-appropriate access (optional — block users from wrong dashboards)
+  const rolePrefixes: Record<string, string[]> = {
+    builder: ['/builder'],
+    mentor: ['/mentor'],
+    judge: ['/judge'],
+    admin: ['/admin', '/mentor', '/builder'],
+  };
+  const allowedPrefixes = rolePrefixes[role] || ['/builder'];
+  const isOnProtectedRoute = url.pathname.startsWith('/builder') ||
+    url.pathname.startsWith('/admin') ||
+    url.pathname.startsWith('/mentor') ||
+    url.pathname.startsWith('/judge');
+
+  if (isOnProtectedRoute) {
+    const isAllowed = allowedPrefixes.some(prefix => url.pathname.startsWith(prefix));
+    if (!isAllowed) {
+      url.pathname = roleDashboard[role] || '/builder';
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ['/builder/:path*', '/admin/:path*', '/mentor/:path*', '/auth'],
+  matcher: ['/builder/:path*', '/admin/:path*', '/mentor/:path*', '/judge/:path*', '/auth'],
 };

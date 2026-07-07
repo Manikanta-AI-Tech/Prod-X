@@ -1,5 +1,4 @@
 import Link from "next/link";
-
 export function Footer() {
   return (
     <footer className="border-t border-border/40 bg-background py-12">
@@ -21,28 +20,28 @@ export function Footer() {
           <div>
             <h4 className="text-sm font-semibold text-white">Program</h4>
             <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-white">Builder Journey</Link></li>
-              <li><Link href="#" className="hover:text-white">Manifesto</Link></li>
-              <li><Link href="#" className="hover:text-white">Curriculum</Link></li>
-              <li><Link href="#" className="hover:text-white">Demo Day</Link></li>
+              <li><Link href="/builder/journey" className="hover:text-white">Builder Journey</Link></li>
+              <li><Link href="/manifesto" className="hover:text-white">Manifesto</Link></li>
+              <li><Link href="/builder/journey" className="hover:text-white">Curriculum</Link></li>
+              <li><Link href="/#demo" className="hover:text-white">Demo Day</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-white">Community</h4>
             <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-white">Products</Link></li>
-              <li><Link href="#" className="hover:text-white">Mentors</Link></li>
-              <li><Link href="#" className="hover:text-white">Alumni</Link></li>
-              <li><Link href="#" className="hover:text-white">Hall of Fame</Link></li>
+              <li><Link href="/#products" className="hover:text-white">Products</Link></li>
+              <li><Link href="/mentor" className="hover:text-white">Mentors</Link></li>
+              <li><Link href="/builder/team" className="hover:text-white">Alumni</Link></li>
+              <li><Link href="/builder/passport" className="hover:text-white">Hall of Fame</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-white">Connect</h4>
             <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-white">Contact</Link></li>
-              <li><Link href="#" className="hover:text-white">Twitter</Link></li>
-              <li><Link href="#" className="hover:text-white">LinkedIn</Link></li>
-              <li><Link href="#" className="hover:text-white">GitHub</Link></li>
+              <li><Link href="/auth" className="hover:text-white">Contact</Link></li>
+              <li><Link href="https://twitter.com/leapstart" className="hover:text-white">Twitter</Link></li>
+              <li><Link href="https://linkedin.com" className="hover:text-white">LinkedIn</Link></li>
+              <li><Link href="https://github.com/Manikanta-AI-Tech/Prod-X" className="hover:text-white">GitHub</Link></li>
             </ul>
           </div>
         </div>

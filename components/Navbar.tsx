@@ -38,7 +38,7 @@ export function Navbar() {
                 </Link>
               </>
             )}
-            <Link href="/#manifesto" className="text-sm font-medium text-muted-foreground transition-colors hover:text-white">
+            <Link href="/manifesto" className="text-sm font-medium text-muted-foreground transition-colors hover:text-white">
               Manifesto
             </Link>
           </div>
