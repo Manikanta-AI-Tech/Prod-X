@@ -13,7 +13,8 @@ import {
   Target, 
   Zap,
   ShieldCheck,
-  Package
+  Package,
+  Layers
 } from "lucide-react";
 
 interface SidebarProps {
@@ -39,6 +40,7 @@ const navItems = {
   ],
   admin: [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Cohorts", href: "/admin/cohorts", icon: Layers },
     { name: "Builders", href: "/admin/builders", icon: Users },
     { name: "Teams", href: "/admin/teams", icon: ShieldCheck },
     { name: "Mentors", href: "/admin/mentors", icon: Zap },
