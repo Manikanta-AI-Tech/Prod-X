@@ -1,25 +1,17 @@
 "use client";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
+import { Suspense } from "react";
+import { ProductsPageContent } from "./ProductsPageContent";
 
-export default function admin_products_Page() {
+export default function AdminProductsPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Navbar />
-      <main className="container mx-auto px-4 pt-24 pb-16 sm:px-8">
-        <div className="py-16 text-center">
-          <div className="mb-6 inline-block rounded-full border border-electric-blue/30 bg-electric-blue/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-electric-blue">
-            Admin Products
-          </div>
-          <h1 className="mx-auto max-w-3xl text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-            Admin Products
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Review all launched products.
-          </p>
-        </div>
-      </main>
-      <Footer />
-    </div>
+    <Suspense fallback={
+      <div className="space-y-3">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="h-16 animate-pulse rounded-xl bg-white/5" />
+        ))}
+      </div>
+    }>
+      <ProductsPageContent />
+    </Suspense>
   );
 }
