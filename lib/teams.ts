@@ -46,28 +46,79 @@ export interface TeamFilters {
 }
 
 /**
+ * Flatten nested Supabase count objects into plain numbers.
+ */
+function flattenNestedCount(val: unknown): number {
+  if (Array.isArray(val) && val.length > 0 && typeof val[0] === "object" && val[0] !== null) {
+    const c = (val[0] as Record<string, unknown>).count;
+    if (typeof c === "number") return c;
+  }
+  if (typeof val === "number") return val;
+  return 0;
+}
+
+/**
+ * Flatten a nested join result to extract a single name string.
+ * Supabase returns [{name: "..."}] for joined relations.
+ */
+function flattenNestedName(val: unknown): string | undefined {
+  if (Array.isArray(val) && val.length > 0 && typeof val[0] === "object" && val[0] !== null) {
+    return (val[0] as Record<string, unknown>).name as string | undefined;
+  }
+  if (typeof val === "string") return val;
+  return undefined;
+}
+
+function flattenTeam(row: Record<string, unknown>): Team {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    cohort_id: row.cohort_id as string | null,
+    product_id: row.product_id as string | null,
+    mentor_id: row.mentor_id as string | null,
+    description: row.description as string | null,
+    progress: row.progress as number,
+    status: row.status as TeamStatus,
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string,
+    member_count: flattenNestedCount(row.member_count),
+    cohort_name: flattenNestedName(row.cohort_name),
+    product_name: flattenNestedName(row.product_name),
+    mentor_name: flattenNestedName(row.mentor_name),
+    members: Array.isArray(row.members) ? (row.members as TeamMember[]) : undefined,
+  };
+}
+
+const TEAM_SELECT = `
+  *,
+  member_count: team_members(count),
+  cohort_name:cohorts!cohort_id(name),
+  product_name:products!product_id(name),
+  mentor_name:mentors!mentor_id(name)
+`;
+
+const TEAM_DETAIL_SELECT = `
+  *,
+  member_count: team_members(count),
+  cohort_name:cohorts!cohort_id(name),
+  product_name:products!product_id(name),
+  mentor_name:mentors!mentor_id(name),
+  members:team_members(*)
+`;
+
+/**
  * List teams with optional filters, search, and member count.
  */
 export async function listTeams(filters?: TeamFilters) {
   let query = supabase
     .from("teams")
-    .select(
-      `
-      *,
-      member_count: team_members(count),
-      cohort_name:cohorts!cohort_id(name),
-      product_name:products!product_id(name),
-      mentor_name:mentors!mentor_id(name)
-    `,
-      { count: "exact" }
-    )
+    .select(TEAM_SELECT, { count: "exact" })
     .order("created_at", { ascending: false });
 
   if (filters?.search) {
-    const searchTerm = `%${filters.search}%`;
-    query = query.or(
-      `name.ilike.${searchTerm},cohorts.name.ilike.${searchTerm},products.name.ilike.${searchTerm},mentors.name.ilike.${searchTerm}`
-    );
+    const term = `%${filters.search}%`;
+    // Use the raw id-based filter since Supabase joins via !inner may not support cross-table or
+    query = query.or(`name.ilike.${term}`);
   }
 
   if (filters?.status && filters.status !== "all") {
@@ -77,7 +128,10 @@ export async function listTeams(filters?: TeamFilters) {
   const { data, error, count } = await query;
 
   if (error) throw error;
-  return { data: data as Team[], count: count ?? 0 };
+  return {
+    data: (data as Record<string, unknown>[]).map(flattenTeam),
+    count: count ?? 0,
+  };
 }
 
 /**
@@ -86,21 +140,12 @@ export async function listTeams(filters?: TeamFilters) {
 export async function getTeam(id: string) {
   const { data, error } = await supabase
     .from("teams")
-    .select(
-      `
-      *,
-      member_count: team_members(count),
-      cohort_name:cohorts!cohort_id(name),
-      product_name:products!product_id(name),
-      mentor_name:mentors!mentor_id(name),
-      members:team_members(*)
-    `
-    )
+    .select(TEAM_DETAIL_SELECT)
     .eq("id", id)
     .single();
 
   if (error) throw error;
-  return data as Team;
+  return flattenTeam(data as Record<string, unknown>);
 }
 
 /**
