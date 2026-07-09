@@ -1,17 +1,56 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { journeyDays, milestones } from "@/data/mock";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Progress } from "@/components/ui/Progress";
 import { CheckCircle2, Circle, Rocket } from "lucide-react";
+import { listJourneyDays, type JourneyDay } from "@/lib/journey";
+import { listMilestones, type Milestone } from "@/lib/milestones";
 
 export default function JourneyPage() {
+  const [journeyDays, setJourneyDays] = useState<JourneyDay[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [days, ms] = await Promise.all([
+          listJourneyDays(),
+          listMilestones(),
+        ]);
+        setJourneyDays(days);
+        setMilestones(ms);
+      } catch (err) {
+        console.error("Failed to load journey data:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
   const totalDays = journeyDays.length;
   const completedDays = journeyDays.filter((d) =>
     d.tasks.every((t) => t.done)
   ).length;
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="h-8 w-48 animate-pulse rounded-lg bg-white/5" />
+        <div className="mt-2 h-4 w-72 animate-pulse rounded-lg bg-white/5" />
+        <div className="h-24 animate-pulse rounded-2xl bg-white/5" />
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32 animate-pulse rounded-2xl bg-white/5" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -20,9 +59,12 @@ export default function JourneyPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <h1 className="text-3xl font-bold tracking-tight text-white">Builder Journey</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-white">
+          Builder Journey
+        </h1>
         <p className="mt-2 text-muted-foreground">
-          Your 10-day sprint timeline. Complete each day&apos;s tasks to progress.
+          Your 10-day sprint timeline. Complete each day&apos;s tasks to
+          progress.
         </p>
       </motion.div>
 
@@ -35,12 +77,17 @@ export default function JourneyPage() {
         <Card className="border-border/40">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Sprint Progress</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                Sprint Progress
+              </span>
               <span className="text-sm font-medium text-white">
-                Day {completedDays}/{totalDays}
+                Day {totalDays > 0 ? completedDays : 0}/{totalDays || 10}
               </span>
             </div>
-            <Progress value={(completedDays / totalDays) * 100} className="h-2.5" />
+            <Progress
+              value={totalDays > 0 ? (completedDays / totalDays) * 100 : 0}
+              className="h-2.5"
+            />
           </CardContent>
         </Card>
       </motion.div>
@@ -49,12 +96,19 @@ export default function JourneyPage() {
       <div className="relative">
         <div className="absolute left-[19px] top-0 h-full w-0.5 bg-border/40" />
         <div className="space-y-6">
+          {journeyDays.length === 0 && (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              No journey data available yet.
+            </p>
+          )}
           {journeyDays.map((day, index) => {
             const allDone = day.tasks.every((t) => t.done);
-            const milestone = milestones[day.day - 1];
+            const milestone = milestones.find(
+              (m) => m.day_number === day.day_number
+            );
             return (
               <motion.div
-                key={day.day}
+                key={day.id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.05 * index }}
@@ -71,34 +125,51 @@ export default function JourneyPage() {
                   }`}
                 />
 
-                <Card className={`border-border/40 transition-colors ${
-                  allDone ? "border-emerald-500/20" : milestone?.status === "current" ? "border-electric-blue/20" : ""
-                }`}>
+                <Card
+                  className={`border-border/40 transition-colors ${
+                    allDone
+                      ? "border-emerald-500/20"
+                      : milestone?.status === "current"
+                      ? "border-electric-blue/20"
+                      : ""
+                  }`}
+                >
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium text-electric-blue">
-                            Day {day.day}
+                            Day {day.day_number}
                           </span>
                           {allDone && (
-                            <Badge variant="outline" className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20">
+                            <Badge
+                              variant="outline"
+                              className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+                            >
                               <CheckCircle2 className="mr-1 h-3 w-3" /> Complete
                             </Badge>
                           )}
                           {milestone?.status === "current" && !allDone && (
-                            <Badge variant="outline" className="bg-electric-blue/15 text-electric-blue border-electric-blue/20">
+                            <Badge
+                              variant="outline"
+                              className="bg-electric-blue/15 text-electric-blue border-electric-blue/20"
+                            >
                               <Rocket className="mr-1 h-3 w-3" /> In Progress
                             </Badge>
                           )}
                         </div>
-                        <h3 className="mt-1 font-semibold text-white">{day.title}</h3>
+                        <h3 className="mt-1 font-semibold text-white">
+                          {day.title}
+                        </h3>
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       {day.tasks.map((task) => (
-                        <div key={task.name} className="flex items-center gap-3">
+                        <div
+                          key={task.id}
+                          className="flex items-center gap-3"
+                        >
                           {task.done ? (
                             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
                           ) : (
