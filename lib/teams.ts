@@ -82,27 +82,21 @@ function flattenTeam(row: Record<string, unknown>): Team {
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
     member_count: flattenNestedCount(row.member_count),
-    cohort_name: flattenNestedName(row.cohort_name),
-    product_name: flattenNestedName(row.product_name),
-    mentor_name: flattenNestedName(row.mentor_name),
+    cohort_name: undefined,
+    product_name: undefined,
+    mentor_name: undefined,
     members: Array.isArray(row.members) ? (row.members as TeamMember[]) : undefined,
   };
 }
 
 const TEAM_SELECT = `
   *,
-  member_count: team_members(count),
-  cohort_name:cohorts!cohort_id(name),
-  product_name:products!product_id(name),
-  mentor_name:mentors!mentor_id(name)
+  member_count: team_members(count)
 `;
 
 const TEAM_DETAIL_SELECT = `
   *,
   member_count: team_members(count),
-  cohort_name:cohorts!cohort_id(name),
-  product_name:products!product_id(name),
-  mentor_name:mentors!mentor_id(name),
   members:team_members(*)
 `;
 
