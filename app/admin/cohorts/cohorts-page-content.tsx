@@ -117,7 +117,7 @@ export function CohortsPageContent() {
         </div>
       </div>
 
-      {/* Content */}
+           {/* Content */}
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -135,21 +135,35 @@ export function CohortsPageContent() {
           </Button>
         </div>
       ) : cohorts.length === 0 ? (
-        <EmptyState
-          title="No cohorts yet"
-          description={
-            search || status !== "all"
-              ? "No cohorts match the current filters."
-              : "Create your first cohort to start organizing builder teams."
-          }
-          icon={<CalendarDays className="h-10 w-10 text-electric-blue" />}
-        />
+        <div className="space-y-6">
+          <EmptyState
+            title="No cohorts yet"
+            description={
+              search || status !== "all"
+                ? "No cohorts match the current filters."
+                : "Create your first cohort to start organizing builder teams."
+            }
+            icon={<CalendarDays className="h-10 w-10 text-electric-blue" />}
+          />
+
+          {!search && status === "all" && (
+            <div className="flex justify-center">
+              <Link href="/admin/cohorts/new">
+                <Button variant="premium" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New Cohort
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
       ) : (
         <>
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               Showing {cohorts.length} of {count} cohorts
             </p>
+
             <Link href="/admin/cohorts/new">
               <Button variant="premium" className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -157,6 +171,7 @@ export function CohortsPageContent() {
               </Button>
             </Link>
           </div>
+
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {cohorts.map((cohort) => (
               <CohortCard
@@ -168,7 +183,6 @@ export function CohortsPageContent() {
           </div>
         </>
       )}
-
       <DeleteCohortDialog
         cohort={deleteTarget}
         onClose={() => setDeleteTarget(null)}

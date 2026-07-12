@@ -30,6 +30,22 @@ export interface CohortFilters {
   status?: CohortStatus | "all";
 }
 
+function flattenNestedCount(value: unknown): number {
+  if (Array.isArray(value) && value[0] && typeof value[0] === "object") {
+    const count = (value[0] as Record<string, unknown>).count;
+    if (typeof count === "number") return count;
+  }
+  return typeof value === "number" ? value : 0;
+}
+
+function flattenCohort(row: Record<string, unknown>): Cohort {
+  return {
+    ...(row as unknown as Cohort),
+    team_count: flattenNestedCount(row.team_count),
+    member_count: flattenNestedCount(row.member_count),
+  };
+}
+
 /**
  * List cohorts with optional filters, search, and computed counts.
  */
@@ -57,7 +73,10 @@ export async function listCohorts(filters?: CohortFilters) {
   const { data, error, count } = await query;
 
   if (error) throw error;
-  return { data: data as Cohort[], count: count ?? 0 };
+  return {
+    data: (data as Record<string, unknown>[]).map(flattenCohort),
+    count: count ?? 0,
+  };
 }
 
 /**
@@ -77,28 +96,33 @@ export async function getCohort(id: string) {
     .single();
 
   if (error) throw error;
-  return data as Cohort;
+  return flattenCohort(data as Record<string, unknown>);
 }
 
 /**
  * Create a new cohort.
  */
 export async function createCohort(input: CohortInput) {
+  console.log("INSERTING", input);
+
   const { data, error } = await supabase
     .from("cohorts")
     .insert({
       name: input.name,
       batch_year: input.batch_year,
-      description: input.description ?? null,
+      description: input.description,
       start_date: input.start_date,
       end_date: input.end_date,
-      status: input.status ?? "upcoming",
+      status: input.status,
     })
-    .select()
-    .single();
+    .select();
+
+  console.log("DATA:", data);
+  console.log("ERROR:", error);
 
   if (error) throw error;
-  return data as Cohort;
+
+  return data?.[0];
 }
 
 /**

@@ -59,7 +59,7 @@ export function CohortCard({ cohort, onDelete }: CohortCardProps) {
 
           <div className="mt-4 flex items-center justify-between border-t border-border/20 pt-3">
             <span className="text-xs text-muted-foreground">
-              {cohort.member_count ?? 0} members total
+             {cohort.member_count ?? 0} members total
             </span>
             <button
               onClick={(e) => {

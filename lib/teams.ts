@@ -1,6 +1,8 @@
 import { supabase } from "./supabase";
 
+
 export type TeamStatus = "active" | "completed" | "paused";
+
 
 export interface TeamMember {
   id: string;
@@ -11,6 +13,7 @@ export interface TeamMember {
   avatar_url: string | null;
   created_at: string;
 }
+
 
 export interface Team {
   id: string;
@@ -30,6 +33,7 @@ export interface Team {
   members?: TeamMember[];
 }
 
+
 export interface TeamInput {
   name: string;
   cohort_id?: string | null;
@@ -40,72 +44,99 @@ export interface TeamInput {
   status?: TeamStatus;
 }
 
+
 export interface TeamFilters {
   search?: string;
   status?: TeamStatus | "all";
 }
 
-/**
- * List teams with optional filters, search, and member count.
- */
+
+function flattenNestedCount(val: unknown): number {
+  if (Array.isArray(val) && val.length > 0 && typeof val[0] === "object" && val[0] !== null) {
+    const c = (val[0] as Record<string, unknown>).count;
+    if (typeof c === "number") return c;
+  }
+  if (typeof val === "number") return val;
+  return 0;
+}
+
+
+function flattenTeam(row: Record<string, unknown>): Team {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    cohort_id: row.cohort_id as string | null,
+    product_id: row.product_id as string | null,
+    mentor_id: row.mentor_id as string | null,
+    description: row.description as string | null,
+    progress: row.progress as number,
+    status: row.status as TeamStatus,
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string,
+    member_count: flattenNestedCount(row.member_count),
+    cohort_name: undefined,
+    product_name: undefined,
+    mentor_name: undefined,
+    members: Array.isArray(row.members) ? (row.members as TeamMember[]) : undefined,
+  };
+}
+
+
+const TEAM_SELECT = `
+  *,
+  member_count: team_members(count)
+`;
+
+
+const TEAM_DETAIL_SELECT = `
+  *,
+  member_count: team_members(count),
+  members:team_members(*)
+`;
+
+
 export async function listTeams(filters?: TeamFilters) {
   let query = supabase
     .from("teams")
-    .select(
-      `
-      *,
-      member_count: team_members(count),
-      cohort_name:cohorts!cohort_id(name),
-      product_name:products!product_id(name),
-      mentor_name:mentors!mentor_id(name)
-    `,
-      { count: "exact" }
-    )
+    .select(TEAM_SELECT, { count: "exact" })
     .order("created_at", { ascending: false });
 
+
   if (filters?.search) {
-    const searchTerm = `%${filters.search}%`;
-    query = query.or(
-      `name.ilike.${searchTerm},cohorts.name.ilike.${searchTerm},products.name.ilike.${searchTerm},mentors.name.ilike.${searchTerm}`
-    );
+    const term = `%${filters.search}%`;
+    query = query.or(`name.ilike.${term}`);
   }
+
 
   if (filters?.status && filters.status !== "all") {
     query = query.eq("status", filters.status);
   }
 
+
   const { data, error, count } = await query;
 
+
   if (error) throw error;
-  return { data: data as Team[], count: count ?? 0 };
+  return {
+    data: (data as Record<string, unknown>[]).map(flattenTeam),
+    count: count ?? 0,
+  };
 }
 
-/**
- * Get a single team by ID with full details.
- */
+
 export async function getTeam(id: string) {
   const { data, error } = await supabase
     .from("teams")
-    .select(
-      `
-      *,
-      member_count: team_members(count),
-      cohort_name:cohorts!cohort_id(name),
-      product_name:products!product_id(name),
-      mentor_name:mentors!mentor_id(name),
-      members:team_members(*)
-    `
-    )
+    .select(TEAM_DETAIL_SELECT)
     .eq("id", id)
     .single();
 
+
   if (error) throw error;
-  return data as Team;
+  return flattenTeam(data as Record<string, unknown>);
 }
 
-/**
- * Create a new team.
- */
+
 export async function createTeam(input: TeamInput) {
   const { data, error } = await supabase
     .from("teams")
@@ -121,13 +152,12 @@ export async function createTeam(input: TeamInput) {
     .select()
     .single();
 
+
   if (error) throw error;
   return data as Team;
 }
 
-/**
- * Update an existing team.
- */
+
 export async function updateTeam(id: string, input: Partial<TeamInput>) {
   const { data, error } = await supabase
     .from("teams")
@@ -139,52 +169,48 @@ export async function updateTeam(id: string, input: Partial<TeamInput>) {
     .select()
     .single();
 
+
   if (error) throw error;
   return data as Team;
 }
 
-/**
- * Delete a team by ID.
- */
+
 export async function deleteTeam(id: string) {
   const { error } = await supabase.from("teams").delete().eq("id", id);
   if (error) throw error;
 }
 
-/**
- * List all cohorts for dropdown select.
- */
+
 export async function listCohortOptions() {
   const { data, error } = await supabase
     .from("cohorts")
     .select("id, name")
     .order("name");
 
+
   if (error) throw error;
   return data as { id: string; name: string }[];
 }
 
-/**
- * List all products for dropdown select.
- */
+
 export async function listProductOptions() {
   const { data, error } = await supabase
     .from("products")
     .select("id, name")
     .order("name");
 
+
   if (error) throw error;
   return data as { id: string; name: string }[];
 }
 
-/**
- * List all mentors for dropdown select.
- */
+
 export async function listMentorOptions() {
   const { data, error } = await supabase
     .from("mentors")
     .select("id, name")
     .order("name");
+
 
   if (error) throw error;
   return data as { id: string; name: string }[];

@@ -47,26 +47,35 @@ export function CohortForm({ cohort }: CohortFormProps) {
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!validate()) return;
+  e.preventDefault();
 
-    setSaving(true);
-    setError(null);
+  if (!validate()) return;
 
-    try {
-      if (isEditing) {
-        await updateCohort(cohort.id, form);
-      } else {
-        await createCohort(form);
-      }
-      router.push("/admin/cohorts");
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save cohort");
-    } finally {
-      setSaving(false);
+  setSaving(true);
+  setError(null);
+
+  try {
+    if (isEditing) {
+      await updateCohort(cohort.id, form);
+    } else {
+      await createCohort(form);
     }
+
+    router.push("/admin/cohorts");
+    router.refresh();
+
+  } catch (err: any) {
+    console.error("CREATE COHORT ERROR:", err);
+
+    setError(
+      JSON.stringify(err, null, 2) ||
+      err?.message ||
+      "Failed to save cohort"
+    );
+  } finally {
+    setSaving(false);
   }
+}
 
   function handleChange(
     field: keyof CohortInput,
