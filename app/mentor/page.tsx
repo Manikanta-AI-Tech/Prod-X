@@ -25,13 +25,21 @@ export default function MentorDashboard() {
   useEffect(() => {
     async function fetchData() {
       // Fetch teams assigned to this mentor (for now all teams if admin/mentor for demo)
-      const { data: teamsData } = await supabase.from('teams').select('*, team_members(profiles(*))');
-      if (teamsData) setAssignedTeams(teamsData);
+      const { data: teamsData } = await supabase.from('teams').select('*').order('name');
+      if (teamsData) {
+        // Also fetch team members separately to avoid FK join issues
+        const { data: membersData } = await supabase.from('team_members').select('*');
+        const teamsWithMembers = teamsData.map(team => ({
+          ...team,
+          team_members: membersData?.filter(m => m.team_id === team.id) || [],
+        }));
+        setAssignedTeams(teamsWithMembers);
+      }
 
-      // Fetch pending deliverables
+      // Fetch pending deliverables with simpler query
       const { data: deliverablesData } = await supabase
         .from('deliverables')
-        .select('*, teams(name), phase_tasks(title)')
+        .select('*')
         .eq('status', 'pending');
       
       if (deliverablesData) setPendingDeliverables(deliverablesData);
@@ -72,8 +80,8 @@ export default function MentorDashboard() {
                 <p className="text-xs text-muted-foreground mb-4">{team.tagline || 'No tagline set'}</p>
                 <div className="flex -space-x-2">
                    {team.team_members?.map((m: any) => (
-                     <div key={m.profiles.id} className="h-6 w-6 rounded-full bg-electric-blue border-2 border-background flex items-center justify-center text-[8px] font-bold">
-                       {m.profiles.full_name?.substring(0,2).toUpperCase()}
+                     <div key={m.id} className="h-6 w-6 rounded-full bg-electric-blue border-2 border-background flex items-center justify-center text-[8px] font-bold">
+                       {m.name?.substring(0,2).toUpperCase()}
                      </div>
                    ))}
                 </div>
