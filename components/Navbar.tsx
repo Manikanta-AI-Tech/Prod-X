@@ -33,6 +33,9 @@ export function Navbar() {
                 <Link href="/builder" className="text-sm font-medium text-muted-foreground transition-colors hover:text-white">
                   Workspace
                 </Link>
+                <Link href="/mentor" className="text-sm font-medium text-muted-foreground transition-colors hover:text-white">
+                  Mentor Studio
+                </Link>
                 <Link href="/admin" className="text-sm font-medium text-muted-foreground transition-colors hover:text-white">
                   Mission Control
                 </Link>
