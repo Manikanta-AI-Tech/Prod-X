@@ -158,8 +158,8 @@ export default function PassportPage() {
               <CardContent className="p-6">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Connect</h3>
                 <div className="space-y-3">
-                  <LinkRow icon={Github} label="GitHub" value={p?.github_handle} prefix="@" field="github_handle" editing={editing} editValue={editValue} setEditing={setEditing} setEditValue={setEditValue} onSave={handleSaveField} />
-                  <LinkRow icon={Linkedin} label="LinkedIn" value={p?.linkedin_url} field="linkedin_url" editing={editing} editValue={editValue} setEditing={setEditing} setEditValue={setEditValue} onSave={handleSaveField} />
+                  <LinkRow icon={GitBranch} label="GitHub" value={p?.github_handle} prefix="@" field="github_handle" editing={editing} editValue={editValue} setEditing={setEditing} setEditValue={setEditValue} onSave={handleSaveField} />
+                  <LinkRow icon={Link2} label="LinkedIn" value={p?.linkedin_url} field="linkedin_url" editing={editing} editValue={editValue} setEditing={setEditing} setEditValue={setEditValue} onSave={handleSaveField} />
                   <LinkRow icon={Globe} label="Portfolio" value={p?.portfolio_url} field="portfolio_url" editing={editing} editValue={editValue} setEditing={setEditing} setEditValue={setEditValue} onSave={handleSaveField} />
                   <LinkRow icon={FileText} label="Resume" value={p?.resume_url} field="resume_url" editing={editing} editValue={editValue} setEditing={setEditing} setEditValue={setEditValue} onSave={handleSaveField} />
                 </div>
