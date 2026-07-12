@@ -12,8 +12,8 @@ import { fetchPassportData, updateProfile, addSkill, removeSkill, updateSkill, t
 import { listMilestones, type Milestone } from "@/lib/milestones";
 import {
   ShieldCheck, CheckCircle2, Lock, User, Mail, Phone, MapPin, GraduationCap,
-  GitBranch, Linkedin, Globe, FileText, Users, Star, Target, Trophy,
-  Sparkles, Award, Plus, X, Edit3, Building, BookOpen, Calendar,
+  GitBranch, Link2, Globe, FileText, Users, Star, Target, Trophy,
+  Award, Plus, X, Edit3, Building, BookOpen, Calendar,
   Zap, Medal, TrendingUp
 } from "lucide-react";
 
