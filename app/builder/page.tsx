@@ -1,156 +1,157 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { StatsCard } from "@/components/StatsCard";
-import { MissionCard } from "@/components/MissionCard";
+import { MissionCard, type Mission } from "@/components/MissionCard";
 import { JourneyTimeline } from "@/components/JourneyTimeline";
 import { LeaderboardCard } from "@/components/LeaderboardCard";
-import { Rocket, Users, Target, MessageSquare } from "lucide-react";
+import { Rocket, Users, Target, MessageSquare, ArrowRight } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
+type Phase = { id: string; name: string; order_index: number };
+type PhaseTask = Mission & { phase_id: string };
+type Deliverable = { task_id: string; status: string | null };
+type Activity = { action: string; created_at: string; profiles: { full_name: string | null } | { full_name: string | null }[] | null };
+type JourneyMilestone = { day: number; title: string; status: "completed" | "current" | "pending" };
+
+const isCompletedSubmission = (status: string | null) => status !== "rejected" && status !== "changes_requested";
+
 export default function BuilderDashboard() {
   const { profile, team, loading } = useProfile();
-  const [milestones, setMilestones] = useState<any[]>([]);
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
+  const [milestones, setMilestones] = useState<JourneyMilestone[]>([]);
+  const [leaderboard, setLeaderboard] = useState<{ rank: number; team: string; score: number; change: "up" | "down" | "same" }[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [mission, setMission] = useState<Mission | null>(null);
+  const [missionSubmitted, setMissionSubmitted] = useState(false);
+  const [completedMilestones, setCompletedMilestones] = useState(0);
+  const [totalMilestones, setTotalMilestones] = useState(0);
+  const [points, setPoints] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && !profile) {
-      router.push("/auth");
+  const loadDashboard = useCallback(async () => {
+    if (!team) return;
+    setError(null);
+
+    const [phasesResult, tasksResult, deliverablesResult, leaderboardResult, activitiesResult] = await Promise.all([
+      supabase.from("challenge_phases").select("id, name, order_index").order("order_index", { ascending: true }),
+      supabase.from("phase_tasks").select("id, phase_id, title, description, points").order("id"),
+      supabase.from("deliverables").select("task_id, status").eq("team_id", team.id),
+      supabase.from("leaderboard").select("team_id, total_points, teams(name)").order("total_points", { ascending: false }).limit(5),
+      supabase.from("activity_logs").select("action, created_at, profiles(full_name)").order("created_at", { ascending: false }).limit(5),
+    ]);
+
+    if (phasesResult.error || tasksResult.error || deliverablesResult.error || leaderboardResult.error || activitiesResult.error) {
+      setError("Some dashboard data could not be loaded. Please refresh and try again.");
     }
+
+    const phases = (phasesResult.data ?? []) as Phase[];
+    const tasks = (tasksResult.data ?? []) as PhaseTask[];
+    const deliverables = (deliverablesResult.data ?? []) as Deliverable[];
+    const submittedTaskIds = new Set(deliverables.filter((item) => isCompletedSubmission(item.status)).map((item) => item.task_id));
+    const nextTask = tasks.find((task) => !submittedTaskIds.has(task.id)) ?? null;
+
+    let currentFound = false;
+    const journey = phases.map((phase) => {
+      const phaseTasks = tasks.filter((task) => task.phase_id === phase.id);
+      const isComplete = phaseTasks.length > 0 && phaseTasks.every((task) => submittedTaskIds.has(task.id));
+      const status: JourneyMilestone["status"] = isComplete ? "completed" : currentFound ? "pending" : "current";
+      if (!isComplete) currentFound = true;
+      return { day: phase.order_index, title: phase.name, status };
+    });
+
+    setMilestones(journey);
+    setCompletedMilestones(journey.filter((milestone) => milestone.status === "completed").length);
+    setTotalMilestones(phases.length);
+    setMission(nextTask);
+    setMissionSubmitted(nextTask ? submittedTaskIds.has(nextTask.id) : false);
+    setActivities((activitiesResult.data ?? []) as Activity[]);
+
+    const leaders = leaderboardResult.data ?? [];
+    setLeaderboard(leaders.map((entry: any, index: number) => ({
+      rank: index + 1,
+      team: Array.isArray(entry.teams) ? entry.teams[0]?.name ?? "Unknown" : entry.teams?.name ?? "Unknown",
+      score: entry.total_points ?? 0,
+      change: "same",
+    })));
+    setPoints(leaders.find((entry: any) => entry.team_id === team.id)?.total_points ?? 0);
+  }, [team]);
+
+  useEffect(() => {
+    if (!loading && !profile) router.push("/auth");
   }, [profile, loading, router]);
 
-  const fetchLeaderboard = async () => {
-    const { data: lb } = await supabase
-      .from('leaderboard')
-      .select('total_points, teams(name)')
-      .order('total_points', { ascending: false })
-      .limit(5);
-
-    if (lb) {
-      setLeaderboard(lb.map((entry: any, i: number) => ({
-        rank: i + 1,
-        team: Array.isArray(entry.teams) ? entry.teams[0]?.name : entry.teams?.name || 'Unknown',
-        score: entry.total_points,
-        change: 'same'
-      })));
-    }
-  };
-
-  const fetchActivities = async () => {
-    const { data: logs } = await supabase
-      .from('activity_logs')
-      .select('*, profiles(full_name, avatar_url)')
-      .order('created_at', { ascending: false })
-      .limit(5);
-    
-    if (logs) setActivities(logs);
-  };
-
   useEffect(() => {
-    async function fetchInitialData() {
-      const { data: phases } = await supabase
-        .from('challenge_phases')
-        .select('*')
-        .order('order_index', { ascending: true });
-      
-      if (phases) {
-        setMilestones(phases.map(p => ({
-          day: p.order_index,
-          title: p.name,
-          status: 'pending'
-        })));
-      }
+    if (!profile || !team) return;
+    loadDashboard();
 
-      await fetchLeaderboard();
-      await fetchActivities();
-    }
+    const leaderboardChannel = supabase.channel("builder-leaderboard-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "leaderboard" }, loadDashboard)
+      .subscribe();
+    const activityChannel = supabase.channel("builder-activity-changes")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_logs" }, loadDashboard)
+      .subscribe();
 
-    if (profile) {
-      fetchInitialData();
+    return () => {
+      supabase.removeChannel(leaderboardChannel);
+      supabase.removeChannel(activityChannel);
+    };
+  }, [profile, team, loadDashboard]);
 
-      // Realtime subscription for leaderboard
-      const lbChannel = supabase.channel('leaderboard-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard' }, fetchLeaderboard)
-        .subscribe();
-
-      // Realtime subscription for activity logs
-      const activityChannel = supabase.channel('activity-changes')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activity_logs' }, fetchActivities)
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(lbChannel);
-        supabase.removeChannel(activityChannel);
-      };
-    }
-  }, [profile]);
-
-  if (loading) return <div className="p-8 text-white">Loading...</div>;
+  if (loading) return <div className="p-8 text-white">Loading your dashboard...</div>;
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white">
-          Welcome, {profile?.full_name || 'Builder'}
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          {team ? `Building with Team ${team.name}` : 'Join a team to start your journey.'}
-        </p>
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-white">Welcome, {profile?.full_name || "Builder"}</h1>
+          <p className="mt-1 text-muted-foreground">{team ? `Building with ${team.name}` : "Join a team to start your journey."}</p>
+        </div>
+        <Link href="/builder/journey" className="inline-flex items-center gap-2 text-sm font-medium text-electric-blue hover:text-electric-blue/80">
+          Continue your journey <ArrowRight className="h-4 w-4" />
+        </Link>
       </div>
 
+      {error && <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</p>}
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Team Progress" value={`${team?.progress || 0}%`} icon={Rocket} />
-        <StatsCard title="Milestones" value="0/6" icon={Target} />
-        <StatsCard title="Team" value={team?.name || 'N/A'} icon={Users} description={team?.tagline} />
-        <StatsCard title="Points" value="0" icon={MessageSquare} description="Build to earn points" />
+        <StatsCard title="Team Progress" value={`${team?.progress ?? 0}%`} icon={Rocket} />
+        <StatsCard title="Milestones" value={`${completedMilestones}/${totalMilestones}`} icon={Target} description="Phases submitted" />
+        <StatsCard title="Team" value={team?.name || "Not assigned"} icon={Users} description={team?.tagline} />
+        <StatsCard title="Points" value={points} icon={MessageSquare} description="Team leaderboard points" />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-8">
-          <MissionCard />
-          
+        <div className="space-y-8 lg:col-span-2">
+          <MissionCard task={mission} teamId={team?.id} profileId={profile?.id} isSubmitted={missionSubmitted} onSubmitted={loadDashboard} />
           <Card className="border-border/40">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-bold">Recent Activity</CardTitle>
+              <Link href="/builder/log" className="text-xs font-medium text-electric-blue hover:text-electric-blue/80">View all</Link>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {activities.map((activity, i) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
-                      {activity.profiles?.full_name?.substring(0, 2).toUpperCase() || '??'}
+                {activities.map((activity, index) => {
+                  const activityProfile = Array.isArray(activity.profiles) ? activity.profiles[0] : activity.profiles;
+                  const name = activityProfile?.full_name || "A builder";
+                  return (
+                    <div key={`${activity.created_at}-${index}`} className="flex items-center gap-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">{name.substring(0, 2).toUpperCase()}</div>
+                      <div className="flex-1"><p className="text-sm text-white"><span className="font-bold">{name}</span> {activity.action}</p><p className="text-xs text-muted-foreground">{new Date(activity.created_at).toLocaleString()}</p></div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-white">
-                        <span className="font-bold">{activity.profiles?.full_name}</span> {activity.action}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{new Date(activity.created_at).toLocaleTimeString()}</p>
-                    </div>
-                  </div>
-                ))}
-                {activities.length === 0 && (
-                   <p className="text-sm text-muted-foreground italic">No recent activity recorded.</p>
-                )}
+                  );
+                })}
+                {!activities.length && <p className="text-sm italic text-muted-foreground">No recent activity recorded.</p>}
               </div>
             </CardContent>
           </Card>
         </div>
-
         <div className="space-y-8">
-          <Card className="border-border/40">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">Your Journey</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <JourneyTimeline milestones={milestones} />
-            </CardContent>
-          </Card>
-
+          <Card className="border-border/40"><CardHeader><CardTitle className="text-lg font-bold">Your Journey</CardTitle></CardHeader><CardContent>{milestones.length ? <JourneyTimeline milestones={milestones} /> : <p className="text-sm text-muted-foreground">Your journey will appear when phases are available.</p>}</CardContent></Card>
           <LeaderboardCard entries={leaderboard} />
         </div>
       </div>
