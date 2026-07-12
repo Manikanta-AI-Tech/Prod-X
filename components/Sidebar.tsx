@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { BrandLogo } from "@/components/BrandLogo";
 import { 
   LayoutDashboard, 
   Rocket, 
@@ -56,9 +57,12 @@ export function Sidebar({ type }: SidebarProps) {
   const items = navItems[type];
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-64 border-r border-border/40 bg-background/50 pt-16 backdrop-blur-xl">
+    <div className="fixed left-0 top-0 h-screen w-64 border-r border-border/40 bg-background/50 backdrop-blur-xl">
       <div className="flex h-full flex-col p-4">
-        <div className="mb-8 px-4 py-2">
+        <div className="border-b border-border/40 px-3 py-4">
+          <BrandLogo />
+        </div>
+        <div className="mb-5 px-4 pt-5">
           <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             {type} Interface
           </span>
