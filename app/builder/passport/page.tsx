@@ -14,7 +14,7 @@ import {
   ShieldCheck, CheckCircle2, Lock, User, Mail, Phone, MapPin, GraduationCap,
   GitBranch, Link2, Globe, FileText, Users, Star, Target, Trophy,
   Award, Plus, X, Edit3, Building, BookOpen, Calendar,
-  Zap, Medal, TrendingUp
+  Zap, Medal, TrendingUp, Rocket
 } from "lucide-react";
 
 const statusIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -198,7 +198,7 @@ export default function PassportPage() {
                   <StatBox icon={Medal} label="Rank" value={`#${stats?.rank ?? '-'}`} />
                   <StatBox icon={TrendingUp} label="Attendance" value={`${stats?.attendance ?? 0}%`} />
                   <StatBox icon={Target} label="Challenges" value={stats?.challenges ?? 0} />
-                  <StatBox icon={Rocket as any} label="Products" value={stats?.products ?? 0} />
+                  <StatBox icon={Rocket} label="Products" value={stats?.products ?? 0} />
                   <StatBox icon={Star} label="Milestones" value={`${completed}/${total}`} />
                 </div>
               </CardContent>
