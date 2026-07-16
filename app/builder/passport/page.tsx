@@ -329,7 +329,7 @@ export default function PassportPage() {
                           <p className="text-xs text-muted-foreground">{c.issuer} · {new Date(c.issued_at).toLocaleDateString()}</p>
                         </div>
                         {c.certificate_url && (
-                          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => window.open(c.certificate_url, '_blank')}>
+                          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => window.open(c.certificate_url!, '_blank')}>
                             View
                           </Button>
                         )}
