@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { getCohortOptions, getTeamOptions } from "@/lib/builders";
 
@@ -20,8 +21,20 @@ export function BuilderFilters({
   onCohortChange,
   onTeamChange,
 }: BuilderFiltersProps) {
-  const cohortOptions = getCohortOptions();
-  const teamOptions = getTeamOptions();
+  const [cohortOptions, setCohortOptions] = useState<string[]>([]);
+  const [teamOptions, setTeamOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function load() {
+      const [cohorts, teams] = await Promise.all([
+        getCohortOptions(),
+        getTeamOptions(),
+      ]);
+      setCohortOptions(cohorts);
+      setTeamOptions(teams);
+    }
+    load();
+  }, []);
 
   const selectClass =
     "rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-white outline-none transition focus:border-electric-blue min-w-[140px]";
