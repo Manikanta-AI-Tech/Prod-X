@@ -1,3 +1,5 @@
+import { supabase } from "./supabase";
+
 export type BuilderStatus = "active" | "completed" | "paused";
 
 export interface Builder {
@@ -62,12 +64,16 @@ const mockBuilders: Builder[] = [
 // Helpers to extract distinct filter options
 // ---------------------------------------------------------------------------
 
-export function getCohortOptions(): string[] {
-  return [...new Set(mockBuilders.map((b) => b.cohort))].sort();
+export async function getCohortOptions(): Promise<string[]> {
+  const { data } = await supabase.from("cohorts").select("name").order("name");
+  if (!data) return [];
+  return data.map((r: any) => r.name).filter(Boolean);
 }
 
-export function getTeamOptions(): string[] {
-  return [...new Set(mockBuilders.map((b) => b.team))].sort();
+export async function getTeamOptions(): Promise<string[]> {
+  const { data } = await supabase.from("teams").select("name").order("name");
+  if (!data) return [];
+  return data.map((r: any) => r.name).filter(Boolean);
 }
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import {
@@ -22,21 +22,45 @@ export function BuilderForm({ builder }: BuilderFormProps) {
   const isEditing = !!builder;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cohortOptions, setCohortOptions] = useState<string[]>([]);
+  const [teamOptions, setTeamOptions] = useState<string[]>([]);
+  const [optionsLoaded, setOptionsLoaded] = useState(false);
 
-  const cohortOptions = getCohortOptions();
-  const teamOptions = getTeamOptions();
+  useEffect(() => {
+    async function loadOptions() {
+      const [cohorts, teams] = await Promise.all([
+        getCohortOptions(),
+        getTeamOptions(),
+      ]);
+      setCohortOptions(cohorts);
+      setTeamOptions(teams);
+      setOptionsLoaded(true);
+    }
+    loadOptions();
+  }, []);
 
-  const [form, setForm] = useState<BuilderInput>({
+  const [form, setForm] = useState<BuilderInput>(() => ({
     full_name: builder?.full_name ?? "",
     email: builder?.email ?? "",
-    cohort: builder?.cohort ?? cohortOptions[0] ?? "",
-    team: builder?.team ?? teamOptions[0] ?? "",
+    cohort: builder?.cohort ?? "",
+    team: builder?.team ?? "",
     product: builder?.product ?? "",
     role: builder?.role ?? "",
     progress: builder?.progress ?? 0,
     status: builder?.status ?? "active",
     avatar_url: builder?.avatar_url ?? null,
-  });
+  }));
+
+  // Set default cohort and team once options are loaded (only for new builders)
+  useEffect(() => {
+    if (optionsLoaded && !builder) {
+      setForm((prev) => ({
+        ...prev,
+        cohort: prev.cohort || cohortOptions[0] || "",
+        team: prev.team || teamOptions[0] || "",
+      }));
+    }
+  }, [optionsLoaded, builder, cohortOptions, teamOptions]);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 

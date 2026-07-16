@@ -1,3 +1,5 @@
+import { supabase } from "./supabase";
+
 export type MentorStatus = "active" | "inactive";
 
 export interface Mentor {
@@ -34,108 +36,38 @@ export interface MentorFilters {
 }
 
 // ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-const mockMentors: Mentor[] = [
-  {
-    id: "m-1",
-    name: "Sarah Kim",
-    email: "sarah.kim@leapstart.io",
-    company: "LeapStart",
-    designation: "Lead Mentor",
-    expertise: "Product Design",
-    bio: "Full-stack engineer and product mentor with 10+ years building SaaS products. Passionate about helping new builders find product-market fit.",
-    linkedin_url: "https://linkedin.com/in/sarahkim",
-    avatar_url: null,
-    status: "active",
-    assigned_cohorts: ["Prod[X] Cohort 2026"],
-    assigned_teams: ["Nebula", "Beacon"],
-    builders_count: 6,
-  },
-  {
-    id: "m-2",
-    name: "Marcus Chen",
-    email: "marcus.chen@pioneervc.com",
-    company: "PioneerVC",
-    designation: "Partner",
-    expertise: "Strategy",
-    bio: "VC partner focused on early-stage developer tools and infrastructure. Mentors teams on go-to-market strategy and fundraising.",
-    linkedin_url: "https://linkedin.com/in/marcuschen",
-    avatar_url: null,
-    status: "active",
-    assigned_cohorts: ["Prod[X] Cohort 2026"],
-    assigned_teams: ["Quantum", "Cascade"],
-    builders_count: 5,
-  },
-  {
-    id: "m-3",
-    name: "Lisa Park",
-    email: "lisa.park@syncwave.io",
-    company: "SyncWave",
-    designation: "CTO",
-    expertise: "Engineering",
-    bio: "CTO who has led 3 startups to acquisition. Passionate about mentoring new builders on technical architecture and engineering best practices.",
-    linkedin_url: "https://linkedin.com/in/lisapark",
-    avatar_url: null,
-    status: "active",
-    assigned_cohorts: ["Prod[X] Cohort 2026"],
-    assigned_teams: ["Zenith", "Vortex"],
-    builders_count: 4,
-  },
-  {
-    id: "m-4",
-    name: "Jason Fried",
-    email: "jason@basecamp.com",
-    company: "Basecamp",
-    designation: "Product Design Mentor",
-    expertise: "Product Design",
-    bio: "Founder and CEO of Basecamp. Simplicity advocate and product design mentor. Helps teams focus on what matters.",
-    linkedin_url: "https://linkedin.com/in/jasonfried",
-    avatar_url: null,
-    status: "active",
-    assigned_cohorts: ["Prod[X] Cohort 2026"],
-    assigned_teams: ["Apex"],
-    builders_count: 3,
-  },
-  {
-    id: "m-5",
-    name: "Guillermo Rauch",
-    email: "rauchg@vercel.com",
-    company: "Vercel",
-    designation: "Deployment & UX Mentor",
-    expertise: "Engineering",
-    bio: "Creator of Next.js and CEO of Vercel. Mentors teams on deployment, DX, and building for the edge.",
-    linkedin_url: "https://linkedin.com/in/rauchg",
-    avatar_url: null,
-    status: "active",
-    assigned_cohorts: ["Prod[X] Cohort 2026"],
-    assigned_teams: ["Quantum", "Nebula"],
-    builders_count: 5,
-  },
-  {
-    id: "m-6",
-    name: "Naval Ravikant",
-    email: "naval@angellist.com",
-    company: "AngelList",
-    designation: "Strategy Mentor",
-    expertise: "Strategy",
-    bio: "Entrepreneur and angel investor. Mentors founders on leverage, long-term thinking, and building enduring companies.",
-    linkedin_url: "https://linkedin.com/in/naval",
-    avatar_url: null,
-    status: "inactive",
-    assigned_cohorts: [],
-    assigned_teams: [],
-    builders_count: 0,
-  },
-];
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-export function getExpertiseOptions(): string[] {
-  return [...new Set(mockMentors.map((m) => m.expertise))].sort();
+export async function getExpertiseOptions(): Promise<string[]> {
+  const { data } = await supabase
+    .from("mentors")
+    .select("expertise")
+    .not("expertise", "is", null);
+  if (!data) return [];
+  return [...new Set(data.map((r: any) => r.expertise).filter(Boolean))].sort();
+}
+
+// ---------------------------------------------------------------------------
+// Map a Supabase row to the Mentor interface
+// ---------------------------------------------------------------------------
+
+function rowToMentor(row: any): Mentor {
+  return {
+    id: row.id,
+    name: row.name ?? "",
+    email: row.email ?? "",
+    company: row.company ?? "",
+    designation: row.role ?? "",
+    expertise: row.expertise ?? "",
+    bio: row.bio ?? "",
+    linkedin_url: row.linkedin_url ?? null,
+    avatar_url: row.photo_url ?? null,
+    status: row.status ?? "active",
+    assigned_cohorts: [],
+    assigned_teams: [],
+    builders_count: 0,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -145,65 +77,86 @@ export function getExpertiseOptions(): string[] {
 export async function listMentors(
   filters?: MentorFilters
 ): Promise<{ data: Mentor[]; count: number }> {
-  let filtered = [...mockMentors];
+  let query = supabase
+    .from("mentors")
+    .select("*", { count: "exact" })
+    .order("name");
 
   if (filters?.search) {
-    const q = filters.search.toLowerCase();
-    filtered = filtered.filter(
-      (m) =>
-        m.name.toLowerCase().includes(q) ||
-        m.designation.toLowerCase().includes(q) ||
-        m.expertise.toLowerCase().includes(q)
-    );
+    const term = `%${filters.search}%`;
+    query = query.or(`name.ilike.${term},role.ilike.${term},expertise.ilike.${term}`);
   }
 
   if (filters?.expertise) {
-    filtered = filtered.filter((m) => m.expertise === filters.expertise);
+    query = query.eq("expertise", filters.expertise);
   }
 
-  return { data: filtered, count: filtered.length };
+  const { data, error, count } = await query;
+
+  if (error) throw error;
+  return {
+    data: (data as any[]).map(rowToMentor),
+    count: count ?? 0,
+  };
 }
 
 export async function getMentor(id: string): Promise<Mentor> {
-  const mentor = mockMentors.find((m) => m.id === id);
-  if (!mentor) throw new Error("Mentor not found");
-  return { ...mentor };
+  const { data, error } = await supabase
+    .from("mentors")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) throw new Error("Mentor not found");
+  return rowToMentor(data);
 }
 
-let nextMentorId = 100;
-
 export async function createMentor(input: MentorInput): Promise<Mentor> {
-  const mentor: Mentor = {
-    id: `m-${nextMentorId++}`,
-    name: input.name,
-    email: input.email,
-    company: input.company,
-    designation: input.designation,
-    expertise: input.expertise,
-    bio: input.bio,
-    linkedin_url: input.linkedin_url ?? null,
-    avatar_url: input.avatar_url ?? null,
-    status: input.status,
-    assigned_cohorts: [],
-    assigned_teams: [],
-    builders_count: 0,
-  };
-  mockMentors.push(mentor);
-  return { ...mentor };
+  const { data, error } = await supabase
+    .from("mentors")
+    .insert({
+      name: input.name,
+      email: input.email,
+      company: input.company,
+      role: input.designation,
+      expertise: input.expertise,
+      bio: input.bio,
+      linkedin_url: input.linkedin_url ?? null,
+      photo_url: input.avatar_url ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return rowToMentor(data);
 }
 
 export async function updateMentor(
   id: string,
   input: Partial<MentorInput>
 ): Promise<Mentor> {
-  const idx = mockMentors.findIndex((m) => m.id === id);
-  if (idx === -1) throw new Error("Mentor not found");
-  mockMentors[idx] = { ...mockMentors[idx], ...input };
-  return { ...mockMentors[idx] };
+  const updates: Record<string, any> = {};
+  if (input.name !== undefined) updates.name = input.name;
+  if (input.email !== undefined) updates.email = input.email;
+  if (input.company !== undefined) updates.company = input.company;
+  if (input.designation !== undefined) updates.role = input.designation;
+  if (input.expertise !== undefined) updates.expertise = input.expertise;
+  if (input.bio !== undefined) updates.bio = input.bio;
+  if (input.linkedin_url !== undefined) updates.linkedin_url = input.linkedin_url;
+  if (input.avatar_url !== undefined) updates.photo_url = input.avatar_url;
+
+  const { data, error } = await supabase
+    .from("mentors")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return rowToMentor(data);
 }
 
 export async function deleteMentor(id: string): Promise<void> {
-  const idx = mockMentors.findIndex((m) => m.id === id);
-  if (idx === -1) throw new Error("Mentor not found");
-  mockMentors.splice(idx, 1);
+  const { error } = await supabase.from("mentors").delete().eq("id", id);
+  if (error) throw error;
 }
