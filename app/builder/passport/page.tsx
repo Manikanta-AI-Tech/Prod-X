@@ -215,7 +215,7 @@ export default function PassportPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {skills.map(skill => (
-                    <div key={skill.id} className="group flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all hover:pr-1" className={`${proficiencyColors[skill.proficiency]}`}>
+                    <div key={skill.id} className={`group flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all hover:pr-1 ${proficiencyColors[skill.proficiency]}`}>
                       <span>{skill.name}</span>
                       <span className="text-[10px] opacity-60">· {skill.proficiency}</span>
                       <button onClick={() => handleCycleProficiency(skill)} className="ml-0.5 rounded-full p-0.5 opacity-0 group-hover:opacity-100 hover:bg-white/10 transition-opacity" title="Change proficiency">
