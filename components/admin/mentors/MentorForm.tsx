@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import {
@@ -21,20 +21,34 @@ export function MentorForm({ mentor }: MentorFormProps) {
   const isEditing = !!mentor;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expertiseOptions, setExpertiseOptions] = useState<string[]>([]);
+  const [optionsLoaded, setOptionsLoaded] = useState(false);
 
-  const expertiseOptions = getExpertiseOptions();
+  useEffect(() => {
+    getExpertiseOptions().then((opts) => {
+      setExpertiseOptions(opts);
+      setOptionsLoaded(true);
+    });
+  }, []);
 
-  const [form, setForm] = useState<MentorInput>({
+  const [form, setForm] = useState<MentorInput>(() => ({
     name: mentor?.name ?? "",
     email: mentor?.email ?? "",
     company: mentor?.company ?? "",
     designation: mentor?.designation ?? "",
-    expertise: mentor?.expertise ?? expertiseOptions[0] ?? "",
+    expertise: mentor?.expertise ?? "",
     bio: mentor?.bio ?? "",
     linkedin_url: mentor?.linkedin_url ?? null,
     avatar_url: mentor?.avatar_url ?? null,
     status: mentor?.status ?? "active",
-  });
+  }));
+
+  // Set default expertise once options loaded
+  useEffect(() => {
+    if (optionsLoaded && !mentor && !form.expertise && expertiseOptions.length > 0) {
+      setForm((prev) => ({ ...prev, expertise: expertiseOptions[0] }));
+    }
+  }, [optionsLoaded, mentor, expertiseOptions, form.expertise]);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 

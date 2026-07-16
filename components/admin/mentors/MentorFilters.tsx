@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { getExpertiseOptions } from "@/lib/mentors";
 
@@ -16,7 +17,11 @@ export function MentorFilters({
   onSearchChange,
   onExpertiseChange,
 }: MentorFiltersProps) {
-  const expertiseOptions = getExpertiseOptions();
+  const [expertiseOptions, setExpertiseOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    getExpertiseOptions().then(setExpertiseOptions);
+  }, []);
 
   const selectClass =
     "rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-white outline-none transition focus:border-electric-blue min-w-[160px]";
