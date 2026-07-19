@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 
-export async function getUserRole(user: any): string | null {
+export function getUserRole(user: any): string | null {
   return user?.user_metadata?.role || null;
 }
 

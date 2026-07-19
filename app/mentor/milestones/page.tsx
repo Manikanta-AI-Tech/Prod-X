@@ -20,8 +20,8 @@ export default function MentorMilestonesPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) { router.push("/auth"); return; }
-    async function fetchData() {
-      const { data: mentor } = await supabase.from("mentors").select("id").eq("email", user.email).single();
+    const currentUser = user!; async function fetchData() {
+      const { data: mentor } = await supabase.from("mentors").select("id").eq("email", currentUser.email).single();
       if (!mentor) { setLoading(false); return; }
       const { data: teamsData } = await supabase.from("teams").select("id, name, progress").eq("mentor_id", mentor.id).order("name");
       setTeams(teamsData || []);

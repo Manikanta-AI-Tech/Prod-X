@@ -24,8 +24,8 @@ export default function MentorReviewsPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) { router.push("/auth"); return; }
-    async function fetchData() {
-      const { data: mentor } = await supabase.from("mentors").select("id").eq("email", user.email).single();
+    const currentUser = user!; async function fetchData() {
+      const { data: mentor } = await supabase.from("mentors").select("id").eq("email", currentUser.email).single();
       if (!mentor) { setLoading(false); return; }
       const { data: teams } = await supabase.from("teams").select("id").eq("mentor_id", mentor.id);
       const ids = teams?.map(t => t.id) || [];
