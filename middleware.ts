@@ -30,25 +30,39 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { session } } = await supabase.auth.getSession();
+
+  const pathnameShort = pathname.substring(0, 40);
   if (!session) {
+    console.log(`[AUTH-DIAG] middleware: NO SESSION for path=${pathnameShort} | redirecting to /auth`);
     response = NextResponse.redirect(new URL("/auth", request.url));
     return response;
   }
+
+  console.log(`[AUTH-DIAG] middleware: SESSION FOUND userId=${session.user.id} email=${session.user.email} path=${pathnameShort}`);
 
   const role = session.user.user_metadata?.role;
+  console.log(`[AUTH-DIAG] middleware: role=${role} from user_metadata`);
+
   if (!role) {
+    console.log(`[AUTH-DIAG] middleware: NO ROLE — redirecting to /auth`);
     response = NextResponse.redirect(new URL("/auth", request.url));
     return response;
   }
 
-  if (role === "admin") return response;
+  if (role === "admin") {
+    console.log(`[AUTH-DIAG] middleware: admin access granted to ${pathnameShort} — proceeding`);
+    return response;
+  }
 
   const allowed = roleRoutes[role] || [];
   if (!allowed.some(p => pathname.startsWith(p))) {
-    response = NextResponse.redirect(new URL(allowed[0] || "/auth", request.url));
+    const dest = allowed[0] || "/auth";
+    console.log(`[AUTH-DIAG] middleware: role=${role} not allowed on ${pathnameShort} — redirecting to ${dest}`);
+    response = NextResponse.redirect(new URL(dest, request.url));
     return response;
   }
 
+  console.log(`[AUTH-DIAG] middleware: ${role} access granted to ${pathnameShort} — proceeding`);
   return response;
 }
 
