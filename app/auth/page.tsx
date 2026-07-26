@@ -33,12 +33,18 @@ export default function AuthPage() {
         if (error) throw error;
         setMessage("Check your email for the confirmation link!");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        router.push("/builder");
+        // Redirect through callback to sync session to server cookies
+        const session = data.session;
+        if (session) {
+          router.push(`/auth/callback?access_token=${session.access_token}&refresh_token=${session.refresh_token}`);
+        } else {
+          router.push("/builder");
+        }
       }
     } catch (error: any) {
       setMessage(error.message);
