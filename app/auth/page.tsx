@@ -1,18 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Navbar } from "@/components/Navbar";
-import { useRouter } from "next/navigation";
 
 export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
   const [message, setMessage] = useState("");
-  const router = useRouter();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,41 +16,22 @@ export default function AuthPage() {
     setMessage("");
 
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: email.split('@')[0], // Default name
-            }
-          }
-        });
-        if (error) throw error;
-        setMessage("Check your email for the confirmation link!");
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-        const session = data.session;
-        if (session) {
-          // Set session cookies server-side via API
-          await fetch("/api/auth/set-session", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              access_token: session.access_token,
-              refresh_token: session.refresh_token,
-            }),
-          });
-          // Full page navigation so middleware reads fresh cookies
-          window.location.href = "/builder";
-        } else {
-          window.location.href = "/builder";
-        }
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Login failed");
       }
+
+      // Server handles cookie setting via createServerClient.
+      // Navigate to the role-based dashboard with a full page load
+      // so the middleware reads the freshly-set cookies.
+      window.location.href = data.redirectTo || "/builder";
     } catch (error: any) {
       setMessage(error.message);
     } finally {
@@ -67,11 +44,9 @@ export default function AuthPage() {
       <Navbar />
       <main className="flex flex-1 items-center justify-center p-6">
         <div className="w-full max-w-md rounded-2xl border border-border/40 bg-card p-8 shadow-xl">
-          <h1 className="mb-2 text-2xl font-bold text-white">
-            {isSignUp ? "Join Prod[X]" : "Welcome Back"}
-          </h1>
+          <h1 className="mb-2 text-2xl font-bold text-white">Welcome Back</h1>
           <p className="mb-6 text-sm text-muted-foreground">
-            {isSignUp ? "Start your builder journey today." : "Log in to your builder workspace."}
+            Log in to your builder workspace.
           </p>
 
           <form onSubmit={handleAuth} className="space-y-4">
@@ -99,24 +74,13 @@ export default function AuthPage() {
             </div>
 
             {message && (
-              <p className={`text-xs ${message.includes("Check") ? "text-emerald-400" : "text-red-400"}`}>
-                {message}
-              </p>
+              <p className="text-xs text-red-400">{message}</p>
             )}
 
             <Button type="submit" disabled={loading} className="w-full premium">
-              {loading ? "Processing..." : isSignUp ? "Create Account" : "Sign In"}
+              {loading ? "Processing..." : "Sign In"}
             </Button>
           </form>
-
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-xs text-muted-foreground hover:text-electric-blue"
-            >
-              {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
-            </button>
-          </div>
         </div>
       </main>
     </div>
