@@ -38,12 +38,21 @@ export default function AuthPage() {
           password,
         });
         if (error) throw error;
-        // Redirect through callback to sync session to server cookies
         const session = data.session;
         if (session) {
-          router.push(`/auth/callback?access_token=${session.access_token}&refresh_token=${session.refresh_token}`);
+          // Set session cookies server-side via API
+          await fetch("/api/auth/set-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+            }),
+          });
+          // Full page navigation so middleware reads fresh cookies
+          window.location.href = "/builder";
         } else {
-          router.push("/builder");
+          window.location.href = "/builder";
         }
       }
     } catch (error: any) {
